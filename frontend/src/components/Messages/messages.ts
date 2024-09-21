@@ -12,7 +12,7 @@ class Messages extends HTMLElement {
   static get styleBase() {
     return /*css*/ `
     section#messages {
-      height:calc(100vh - 282px);
+      height: calc(100vh - 340px);
       display: flex;
       flex-direction: column;
       gap:10px;

@@ -12,6 +12,18 @@ class PageChat extends HTMLElement {
       margin-bottom: 30px;
     }
 
+    h1 {
+      margin-bottom: 0;
+    }
+
+    h3 {
+      margin-block: 20px;
+
+      span {
+        color: green;
+      }
+    }
+
     form-fieldset {
       margin-bottom: 30px;
     }
@@ -25,10 +37,12 @@ class PageChat extends HTMLElement {
   button!: HTMLButtonElement;
 
   render() {
-    this.shadowRoot!.innerHTML = /*html*/ `
+    const roomID = "12A3X";
+    this.shadowRoot!.innerHTML = /* html */ `
     <style>${PageChat.styleBase}</style>
     <main>
       <h1>Chat</h1>
+      <h3>Room ID: <span>${roomID}</span></h3>
       <messages-el></messages-el>
       <!-- TODO Componente FormFieldset -->
       <form-fieldset

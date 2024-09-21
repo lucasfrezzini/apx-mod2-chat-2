@@ -41,6 +41,7 @@ class FormFieldsetGroup extends HTMLElement {
       background-color: var(--color-blue);
       border: var(--color-blue);
       font-weight: bold;
+      cursor: pointer;
     }
     .hidden {display: none}
     `;

@@ -1,5 +1,5 @@
 key.json
 node_modules
 .env
-configuracion/service-account.json
+db/service-account.json
 **/*Zone.Identifier

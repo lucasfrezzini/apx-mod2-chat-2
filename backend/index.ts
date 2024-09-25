@@ -4,6 +4,7 @@ import { firestoreDB, realtimeDB } from "./db/database";
 
 // Referencias DB
 const usersRef = firestoreDB.collection("users");
+const usersReff = "";
 
 const app = express();
 const port = 3000;
@@ -14,7 +15,7 @@ app.use(cors());
 // Rutas de usuario definidas aquí
 // app.use("/api/users", userRoutes);
 
-// TODO: POST /signup: con este endpoint vamos a dar de alta en Firestore a un user pidiéndole solo el email (por ahora).
+// POST /signup: Alta de user con email.
 app.post("/signup", async (req, res) => {
   const { email } = req.body;
   // Evita variables vacías o nulas
@@ -23,20 +24,58 @@ app.post("/signup", async (req, res) => {
     Object.keys(req.body).length === 0 ||
     email.replaceAll(" ", "") == ""
   ) {
-    return res.status(400).json({ msg: "Datos incompletos" });
+    return res.status(400).json({
+      type: "error",
+      data: {
+        messageKey: "Error",
+        messageDescription: "Error con la validación de datos",
+        errorDetails: {
+          fieldName: "email",
+          issue: "El campo es incorrecto o vacío",
+        },
+      },
+    });
   }
 
   try {
-    // TODO: verificar si existe un usuario con ese email
+    // Verificar si existe un usuario con ese email
+    const user = await usersRef.where("email", "==", email).get();
+    if (user.docs.length > 0) {
+      return res.status(400).json({
+        type: "error",
+        data: {
+          messageKey: "Error",
+          messageDescription: "Error con la validación de datos",
+          errorDetails: {
+            fieldName: "email",
+            issue: "Email no válido",
+          },
+        },
+      });
+    }
+
     // Creamos un nuevo usuario
     const newUser = await usersRef.doc().set({
       email,
     });
-    console.log(newUser);
-    res.status(200).json({ message: "Usuario creado con éxito" });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ msg: "Error al crear el usuario" });
+    res.status(200).json({
+      type: "success",
+      data: {
+        messageKey: "Éxito",
+        messageDescription: "Se creo correctamente el usuario",
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      type: "error",
+      data: {
+        messageKey: "Error",
+        messageDescription: "Error al crear el usuario en la BD",
+        errorDetails: {
+          issue: error.message,
+        },
+      },
+    });
   }
 });
 // TODO: POST /auth: con este endpoint vamos a chequear el email que nos envíen en el body y a devolver el id interno (el id de Firestore) de ese user. En el futuro vamos a pedir adicionalmente una contraseña.

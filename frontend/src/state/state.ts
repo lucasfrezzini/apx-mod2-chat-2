@@ -1,9 +1,9 @@
 const state = {
   data: {
     user: {
-      admin: "",
+      username: "",
       email: "",
-      nombre: "",
+      name: "",
     },
     roomIDshort: "",
     roomIDlong: "",
@@ -25,16 +25,14 @@ const state = {
     const currentState = state;
     return currentState.data.user;
   },
-  setUser: (user: { admin: string; email: string; nombre: string }) => {
+  setUser: (user: { username: string; email: string; name: string }) => {
     const currentState = state;
     currentState.data.user = user;
     currentState.listeners();
   },
-  setNewMessage: (message: any) => {
+  setNewMessages: (messages: any) => {
     const currentState = state;
-    // ! REFACTOR: Array of never initialization (if statement)
-    if ((currentState.data.messages[0] = "")) currentState.data.messages = [];
-    currentState.data.messages.push(message);
+    currentState.data.messages = messages;
   },
   getMessages: () => {
     const currentState = state;

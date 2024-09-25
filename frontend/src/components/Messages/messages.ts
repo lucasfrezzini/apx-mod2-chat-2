@@ -2,11 +2,9 @@ import { database } from "../../db/database";
 import { ref, onValue } from "firebase/database";
 import state from "../../state/state";
 
-// const mensajesRef = ref(database, "chat/");
-// onValue(mensajesRef, (snapshot) => {
-//   const datos = snapshot.val();
-//   console.log(datos); // Actualiza tu interfaz de usuario aquí
-// });
+const scrollToBottom = (messages: HTMLElement) => {
+  messages!.scrollTo(0, messages!.scrollHeight);
+};
 
 class Messages extends HTMLElement {
   static get styleBase() {
@@ -49,8 +47,9 @@ class Messages extends HTMLElement {
     }
     `;
   }
-  usernameAdmin: string = state.getUser().replaceAll(" ", "").toLowerCase();
-  messages: Array<any> = [];
+
+  usernameAdmin: string = state.getUser().username;
+  messages: Array<any> = state.getMessages();
 
   constructor() {
     super();
@@ -62,13 +61,22 @@ class Messages extends HTMLElement {
     const dbRef = ref(database, "chatroom/chat");
     onValue(dbRef, (snapshot) => {
       const data = snapshot.val();
-      this.updateMessages(data);
+      const messages = Object.values(data || {});
+      console.log(messages);
+      state.setNewMessages(messages);
+      this.updateMessages();
+      // this.updateMessages(data);
     });
   }
 
-  updateMessages(data: Array<any>) {
-    this.messages = Object.values(data || {});
+  // updateMessages(data: Array<any>) {
+  updateMessages() {
+    const currentState = state;
+    this.messages = currentState.getMessages();
     this.render();
+
+    // this.messages = Object.values(data || {});
+    // this.render();
   }
 
   render() {
@@ -97,6 +105,8 @@ class Messages extends HTMLElement {
         .join("")}
     </section>
     `;
+    const messagesEl = this.shadowRoot!.querySelector("section")!;
+    scrollToBottom(messagesEl);
   }
 
   connectedCallback() {

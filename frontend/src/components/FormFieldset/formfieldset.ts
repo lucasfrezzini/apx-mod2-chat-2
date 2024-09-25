@@ -72,6 +72,12 @@ class FormFieldset extends HTMLElement {
   }
 
   async sendMessage(message: string) {
+    const { username, name, email } = state.getUser();
+    const user = {
+      username: username.replaceAll(" ", "").toLowerCase(),
+      name,
+      email,
+    };
     const response = await fetch("http://localhost:3000/api/messages", {
       method: "POST",
       headers: {
@@ -79,8 +85,7 @@ class FormFieldset extends HTMLElement {
       },
       body: JSON.stringify({
         message: message,
-        username: state.getUser().replaceAll(" ", "").toLowerCase(),
-        name: state.getUser(),
+        ...user,
       }),
     });
   }

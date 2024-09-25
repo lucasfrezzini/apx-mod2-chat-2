@@ -12,9 +12,6 @@ const port = 3000;
 app.use(express.json());
 app.use(cors());
 
-// Rutas de usuario definidas aquí
-// app.use("/api/users", userRoutes);
-
 // POST /signup: Alta de user con email.
 app.post("/signup", async (req, res) => {
   const { email } = req.body;
@@ -31,7 +28,7 @@ app.post("/signup", async (req, res) => {
         messageDescription: "Error con la validación de datos",
         errorDetails: {
           fieldName: "email",
-          issue: "El campo es incorrecto o vacío",
+          issue: "El campo está vacío",
         },
       },
     });
@@ -78,8 +75,55 @@ app.post("/signup", async (req, res) => {
     });
   }
 });
-// TODO: POST /auth: con este endpoint vamos a chequear el email que nos envíen en el body y a devolver el id interno (el id de Firestore) de ese user. En el futuro vamos a pedir adicionalmente una contraseña.
-app.post("/signup", (req, res) => {});
+// POST /auth: buscamos el usuario por email y devolvemos su ID en Firestore.
+app.post("/auth", async (req, res) => {
+  const { email } = req.body;
+  // Evita variables vacías o nulas
+  if (
+    Object.values(req.body).includes("") ||
+    Object.keys(req.body).length === 0 ||
+    email.replaceAll(" ", "") == ""
+  ) {
+    return res.status(400).json({
+      type: "error",
+      data: {
+        messageKey: "Error",
+        messageDescription: "Error con la validación de datos",
+        errorDetails: {
+          fieldName: "email",
+          issue: "El campo está vacío",
+        },
+      },
+    });
+  }
+
+  // Busca el usuario y devuelve el ID en Firestore
+  try {
+    const user = await usersRef.where("email", "==", email).get();
+    console.log(user.docs[0].id);
+    res.status(200).json({
+      type: "success",
+      data: {
+        messageKey: "Éxito",
+        messageDescription: "Se encontró el usuario",
+        successDetails: {
+          userFirestoreID: user.docs[0].id,
+        },
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      type: "error",
+      data: {
+        messageKey: "Error",
+        messageDescription: "Error al buscar el usuario en la BD",
+        errorDetails: {
+          issue: error.message,
+        },
+      },
+    });
+  }
+});
 // TODO: POST /rooms: este endpoint va a crear un room en Firestore y en la Realtime Database. En la primera va a guardar el id corto (AAFF, por ejemplo) y lo va a asociar a un id complejo que estará en la Realtime DB.
 app.post("/signup", (req, res) => {});
 // TODO: GET /rooms/:roomId?userid=1234

@@ -1,10 +1,12 @@
 import express from "express";
 import cors from "cors";
 import { firestoreDB, realtimeDB } from "./db/database";
+import { generateRandomString } from "./src/utils/utils";
+import { v4 as uuidv4 } from "uuid";
 
 // Referencias DB
 const usersRef = firestoreDB.collection("users");
-const usersReff = "";
+const roomsRef = firestoreDB.collection("rooms");
 
 const app = express();
 const port = 3000;
@@ -12,9 +14,9 @@ const port = 3000;
 app.use(express.json());
 app.use(cors());
 
-// POST /signup: Alta de user con email.
+//* POST /signup: Alta de user con email.
 app.post("/signup", async (req, res) => {
-  const { email } = req.body;
+  const email = req.body.email || "";
   // Evita variables vacías o nulas
   if (
     Object.values(req.body).includes("") ||
@@ -38,7 +40,7 @@ app.post("/signup", async (req, res) => {
     // Verificar si existe un usuario con ese email
     const user = await usersRef.where("email", "==", email).get();
     if (user.docs.length > 0) {
-      return res.status(400).json({
+      return res.status(401).json({
         type: "error",
         data: {
           messageKey: "Error",
@@ -75,9 +77,9 @@ app.post("/signup", async (req, res) => {
     });
   }
 });
-// POST /auth: buscamos el usuario por email y devolvemos su ID en Firestore.
+//* POST /auth: buscamos el usuario por email y devolvemos su ID en Firestore.
 app.post("/auth", async (req, res) => {
-  const { email } = req.body;
+  const email = req.body.email || "";
   // Evita variables vacías o nulas
   if (
     Object.values(req.body).includes("") ||
@@ -124,9 +126,101 @@ app.post("/auth", async (req, res) => {
     });
   }
 });
-// TODO: POST /rooms: este endpoint va a crear un room en Firestore y en la Realtime Database. En la primera va a guardar el id corto (AAFF, por ejemplo) y lo va a asociar a un id complejo que estará en la Realtime DB.
-app.post("/signup", (req, res) => {});
-// TODO: GET /rooms/:roomId?userid=1234
+
+// POST /rooms: creamos las rooms en ambas BD y las asociamos
+app.post("/rooms", async (req, res) => {
+  const userID = req.body.userID || "";
+  // Evita variables vacías o nulas
+  if (
+    Object.values(req.body).includes("") ||
+    Object.keys(req.body).length === 0 ||
+    userID.replaceAll(" ", "") == ""
+  ) {
+    return res.status(400).json({
+      type: "error",
+      data: {
+        messageKey: "Error",
+        messageDescription: "Error con la validación de datos",
+        errorDetails: {
+          issue: "No se envió un ID válido",
+        },
+      },
+    });
+  }
+
+  // Verificar si existe un usuario con ese ID
+  const user = await usersRef.doc(userID).get();
+  if (!user.exists) {
+    return res.status(401).json({
+      type: "error",
+      data: {
+        messageKey: "Error",
+        messageDescription: "Error con la validación de datos",
+        errorDetails: {
+          issue: "El ID no existe",
+        },
+      },
+    });
+  }
+
+  // Verificar que el usuario no tenga un room creado (llamar a la ref y filtrar manualmente)
+  const rooms = realtimeDB.ref(`chatrooms`);
+  const snapshot = await rooms.get();
+  const ownerRoom = Object.values(snapshot.val()).find((room: any) => {
+    return room.owner === userID;
+  });
+  if (ownerRoom) {
+    return res.status(401).json({
+      type: "error",
+      data: {
+        messageKey: "Error",
+        messageDescription: "Error con la validación de datos",
+        errorDetails: {
+          issue: "El usuario ya tiene un Room creado",
+        },
+      },
+    });
+  }
+
+  try {
+    const shortRoomID = generateRandomString(5);
+    const longRoomID = uuidv4();
+    // Crear el Room en la RTDB con el longRoomID y declarar un owner de ese room
+    const roomRTDBRef = await realtimeDB.ref(`chatrooms/${longRoomID}`);
+    await roomRTDBRef.set({
+      messages: [],
+      owner: userID,
+    });
+
+    // Crear el Room en Firestore asociando el longRoomID con el shortRoomID para ubicarlo fácil
+    await roomsRef.doc(shortRoomID).set({
+      rtdbRoomID: longRoomID,
+    });
+    res.status(200).json({
+      type: "success",
+      data: {
+        messageKey: "Éxito",
+        messageDescription: "Se creo correctamente el Room",
+        successDetails: {
+          roomID: shortRoomID,
+        },
+      },
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      type: "error",
+      data: {
+        messageKey: "Error",
+        messageDescription: "Error al buscar el usuario en la BD",
+        errorDetails: {
+          issue: error.message,
+        },
+      },
+    });
+  }
+});
+
+// TODO: GET /rooms/:roomId?userid=1234 por último, este endpoint va a recibir el id “amigable” (AAFF) y va devolver el id complejo (el de la RTDB). Además va a exigir que un userId válido acompañe el request.
 app.post("/signup", (req, res) => {});
 
 app.listen(port, () => {

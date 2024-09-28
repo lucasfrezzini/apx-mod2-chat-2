@@ -102,7 +102,6 @@ app.post("/auth", async (req, res) => {
   // Busca el usuario y devuelve el ID en Firestore
   try {
     const user = await usersRef.where("email", "==", email).get();
-    console.log(user.docs[0].id);
     res.status(200).json({
       type: "success",
       data: {
@@ -127,7 +126,7 @@ app.post("/auth", async (req, res) => {
   }
 });
 
-// POST /rooms: creamos las rooms en ambas BD y las asociamos
+//* POST /rooms: creamos las rooms en ambas BD y las asociamos
 app.post("/rooms", async (req, res) => {
   const userID = req.body.userID || "";
   // Evita variables vacías o nulas
@@ -220,8 +219,72 @@ app.post("/rooms", async (req, res) => {
   }
 });
 
-// TODO: GET /rooms/:roomId?userid=1234 por último, este endpoint va a recibir el id “amigable” (AAFF) y va devolver el id complejo (el de la RTDB). Además va a exigir que un userId válido acompañe el request.
-app.post("/signup", (req, res) => {});
+//* GET /rooms/:roomId?userid=1234 devuelve el room de realtimeDB asociado a ese userID y roomID
+app.get("/rooms/:roomID", async (req, res) => {
+  const roomID = req.params.roomID || "";
+  const userID: any = req.query.userID || "";
+
+  // Evita variables vacías o nulas
+  if (
+    Object.values(req.params).includes("") ||
+    req.params.roomID.length === 0 ||
+    roomID.replaceAll(" ", "") == ""
+  ) {
+    return res.status(400).json({
+      type: "error",
+      data: {
+        messageKey: "Error",
+        messageDescription: "Error con la validación de datos",
+        errorDetails: {
+          issue: "No se envió un ID válido",
+        },
+      },
+    });
+  }
+
+  // Verificar si existe un usuario con ese ID
+  const user = await usersRef.doc(userID).get();
+  if (!user.exists) {
+    return res.status(401).json({
+      type: "error",
+      data: {
+        messageKey: "Error",
+        messageDescription: "Error con la validación de datos",
+        errorDetails: {
+          issue: "El ID de usuario no existe",
+        },
+      },
+    });
+  }
+
+  // Verificar el roomID corto que sea válido
+  const room = await roomsRef.doc(roomID).get();
+  if (!room.exists) {
+    return res.status(401).json({
+      type: "error",
+      data: {
+        messageKey: "Error",
+        messageDescription: "Error con la validación de datos",
+        errorDetails: {
+          issue: "El RoomID no existe",
+        },
+      },
+    });
+  } else {
+    const { rtdbRoomID } = room.data()!;
+    res.status(200).json({
+      type: "success",
+      data: {
+        messageKey: "Éxito",
+        messageDescription: "Se encontró el Room",
+        successDetails: {
+          roomID,
+          rtdbRoomID,
+        },
+      },
+    });
+  }
+});
 
 app.listen(port, () => {
   console.log(`El servidor se está ejecutando desde el puerto: ${port}`);
